@@ -9,6 +9,8 @@
 #include "glm/gtx/string_cast.hpp"
 #include <iostream>
 #include <random>
+#define _USE_MATH_DEFINES
+#include <math.h>
 
 void Display::make_world()
 {	
@@ -38,6 +40,8 @@ void Display::make_world()
 
 bool Display::setup(int argc, char* argv[])
 {
+	set_instance();
+
 	glfwSetErrorCallback(error_callback_wrapper);
 
 	if (!glfwInit())
@@ -59,6 +63,10 @@ bool Display::setup(int argc, char* argv[])
 	glfwMakeContextCurrent(window);
 	glfwSetKeyCallback(window, key_callback_wrapper);
 
+	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+	glfwGetCursorPos(window, &cursor_x, &cursor_y);
+	glfwSetCursorPosCallback(window, cursor_position_wrapper);
+
 	GLenum err = glewInit();
 	if (err != GLEW_OK)
 	{
@@ -75,8 +83,9 @@ bool Display::setup(int argc, char* argv[])
 
 	make_world();
 
-	previous_time = glfwGetTime();
-	frame_count = 0;
+	previous_time_fps = glfwGetTime();
+
+	position = glm::vec3(BLOCKS_X*CHUNKS_X / 2.0, BLOCKS_Y*CHUNKS_Y, BLOCKS_Z*CHUNKS_Z / 2.0);
 
 	std::cout << "Setup successful." << std::endl;
 	return true;
@@ -93,6 +102,7 @@ void Display::start()
 
 	while (!glfwWindowShouldClose(window))
 	{
+		update();
 		render();
 	}
 
@@ -134,16 +144,11 @@ bool Display::setup_program()
     return true;
 }
 
-void Display::update()
-{
-	
-}
-
 void Display::set_model_translation(int x, int y, int z)
 {
 	model = glm::translate(glm::mat4(1), glm::vec3(x, y, z));
-	view = glm::lookAt(glm::vec3(BLOCKS_X*CHUNKS_X / 2.0, BLOCKS_Y*CHUNKS_Y * 2.0, BLOCKS_Z*CHUNKS_Z * 2.0), glm::vec3(BLOCKS_X*CHUNKS_X / 2.0, BLOCKS_Y*CHUNKS_Y, BLOCKS_Z*CHUNKS_Z / 2.0), glm::vec3(0, 1, 0));
-	projection = glm::perspective(45.0, 1.0 * width / height, 0.001, 1000.0);
+	view = glm::lookAt(position, position + look_at, glm::vec3(0, 1, 0));
+	projection = glm::perspective(glm::radians(60.0), 1.0 * width / height, 0.001, 1000.0);
 	mvp = projection * view * model;
 	glUniformMatrix4fv(u_mvp, 1, GL_FALSE, glm::value_ptr(mvp));
 }
@@ -157,12 +162,42 @@ void Display::render()
 
 	double current_time = glfwGetTime();
 	frame_count++;
-	if (current_time - previous_time >= 1.0)
+	if (current_time - previous_time_fps >= 1.0)
 	{
 		show_fps();
 		frame_count = 0;
-		previous_time = current_time;
+		previous_time_fps = current_time;
 	}
+}
+
+void Display::update()
+{
+	double current_time = glfwGetTime();
+	float d_time = current_time - previous_time_move;
+	previous_time_move = current_time;
+
+	float distance = speed * d_time;
+
+	glm::vec3 right_dir = glm::vec3(-look_at.z, 0, look_at.x);
+
+	if (move & left)
+	{
+		position -= right_dir * distance;
+	}
+	if (move & right)
+	{
+		position += right_dir * distance;
+	}
+	if (move & forward)
+	{
+		position += look_at * distance;
+	}
+	if (move & backward)
+	{
+		position -= look_at * distance;
+	}
+
+	render();
 }
 
 void Display::error_callback(int error, const char* description)
@@ -172,9 +207,43 @@ void Display::error_callback(int error, const char* description)
 
 void Display::key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
+	
+
 	if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
 	{
 		glfwSetWindowShouldClose(window, GLFW_TRUE);
+	}
+	else if (key == GLFW_KEY_A && action == GLFW_PRESS)
+	{
+		move |= left;
+	}
+	else if (key == GLFW_KEY_D && action == GLFW_PRESS)
+	{
+		move |= right;
+	}
+	else if (key == GLFW_KEY_W && action == GLFW_PRESS)
+	{
+		move |= forward;
+	}
+	else if (key == GLFW_KEY_S && action == GLFW_PRESS)
+	{
+		move |= backward;
+	}
+	else if (key == GLFW_KEY_A && action == GLFW_RELEASE)
+	{
+		move &= ~left;
+	}
+	else if (key == GLFW_KEY_D && action == GLFW_RELEASE)
+	{
+		move &= ~right;
+	}
+	else if (key == GLFW_KEY_W && action == GLFW_RELEASE)
+	{
+		move &= ~forward;
+	}
+	else if (key == GLFW_KEY_S && action == GLFW_RELEASE)
+	{
+		move &= ~backward;
 	}
 }
 
@@ -183,6 +252,41 @@ void Display::show_fps()
 	std::string new_title = "FPS: ";
 	new_title.append(std::to_string(frame_count));
 	glfwSetWindowTitle(window, new_title.c_str());
+}
+
+void Display::cursor_position(GLFWwindow* window, double x, double y)
+{
+	double d_x = x - cursor_x;
+	double d_y = y - cursor_y;
+	const float sensitivity = 0.001;
+
+	angles.x -= d_x * sensitivity;
+	angles.y -= d_y * sensitivity;
+
+	if (angles.x < -M_PI)
+	{
+		angles.x += M_PI * 2;
+	}
+	else if (angles.x > -M_PI)
+	{
+		angles.x -= M_PI * 2;
+	}
+
+	if (angles.y < -M_PI / 2)
+	{
+		angles.y = -M_PI / 2;
+	}
+	else if (angles.y > M_PI / 2)
+	{
+		angles.y = M_PI / 2;
+	}
+
+	look_at.x = sinf(angles.x) * cosf(angles.y);
+	look_at.y = sinf(angles.y);
+	look_at.z = cosf(angles.x) * cosf(angles.y);
+
+	cursor_x = x;
+	cursor_y = y;
 }
 
 // Cannot give member functions as callbacks, wrap them
@@ -206,4 +310,9 @@ void Display::error_callback_wrapper(int error, const char* description) {
 
 void Display::key_callback_wrapper(GLFWwindow* window, int key, int scancode, int action, int mods) {
 	instance->key_callback(window, key, scancode, action, mods);
+}
+
+void Display::cursor_position_wrapper(GLFWwindow* window, double x, double y)
+{
+	instance->cursor_position(window, x, y);
 }

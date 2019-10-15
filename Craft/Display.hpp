@@ -15,13 +15,28 @@ private:
     GLFWwindow* window;
     const char* title;
 
-	int frame_count;
-	double previous_time;
+	int frame_count = 0;
+	double previous_time_fps;
 
     GLuint program;
     GLint vs;
     GLint fs;
 
+	double cursor_x;
+	double cursor_y;
+
+	float speed = 10.0;
+	double previous_time_move = 0;
+
+	int move = 0;
+	const int left = 1;
+	const int right = 2;
+	const int forward = 4;
+	const int backward = 8;
+
+	glm::vec3 position;
+	glm::vec2 angles;
+	glm::vec3 look_at; // direction
     glm::mat4 model;
 	glm::mat4 view;
     glm::mat4 projection;
@@ -31,15 +46,16 @@ private:
     void update(void);
 	void error_callback(int error, const char* description);
 	void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods);
-    // Cannot give member functions as callbacks, wrap them
+	void cursor_position(GLFWwindow* window, double x, double y);
+	// Cannot give member functions as callbacks, wrap them
 	static void render_wrapper(void);
 	static void update_wrapper(void);
 	static void error_callback_wrapper(int error, const char* description);
 	static void key_callback_wrapper(GLFWwindow* window, int key, int scancode, int action, int mods);
-	
+	static void cursor_position_wrapper(GLFWwindow* window, double x, double y);
+
 	void set_instance();
     bool setup_program();
-
 	void show_fps();
 
 	// TODO: move to a World class
