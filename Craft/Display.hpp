@@ -15,6 +15,9 @@ private:
     GLFWwindow* window;
     const char* title;
 
+	int frame_count;
+	double previous_time;
+
     GLuint program;
     GLint vs;
     GLint fs;
@@ -36,6 +39,8 @@ private:
 	
 	void set_instance();
     bool setup_program();
+
+	void show_fps();
 
 	// TODO: move to a World class
 	SuperChunk* world;

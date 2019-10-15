@@ -75,6 +75,9 @@ bool Display::setup(int argc, char* argv[])
 
 	make_world();
 
+	previous_time = glfwGetTime();
+	frame_count = 0;
+
 	std::cout << "Setup successful." << std::endl;
 	return true;
 }
@@ -151,6 +154,15 @@ void Display::render()
 	world->render(this);
 	glfwSwapBuffers(window);
 	glfwPollEvents();
+
+	double current_time = glfwGetTime();
+	frame_count++;
+	if (current_time - previous_time >= 1.0)
+	{
+		show_fps();
+		frame_count = 0;
+		previous_time = current_time;
+	}
 }
 
 void Display::error_callback(int error, const char* description)
@@ -164,6 +176,13 @@ void Display::key_callback(GLFWwindow* window, int key, int scancode, int action
 	{
 		glfwSetWindowShouldClose(window, GLFW_TRUE);
 	}
+}
+
+void Display::show_fps()
+{
+	std::string new_title = "FPS: ";
+	new_title.append(std::to_string(frame_count));
+	glfwSetWindowTitle(window, new_title.c_str());
 }
 
 // Cannot give member functions as callbacks, wrap them
