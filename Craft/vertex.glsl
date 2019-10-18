@@ -1,8 +1,8 @@
-#version 120
+#version 130
 
-attribute vec4 a_coord;
+in vec4 a_coord;
 uniform mat4 u_mvp;
-varying vec4 texcoord;
+out vec4 texcoord;
 
 void main()
 {

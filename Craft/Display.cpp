@@ -2,6 +2,7 @@
 #include "Display.hpp"
 #include "Chunk.h"
 #include "shader.hpp"
+#include "lodepng.h"
 #include "glm/glm.hpp"
 #include "glm/gtc/matrix_transform.hpp"
 #include "glm/gtc/type_ptr.hpp"
@@ -11,13 +12,14 @@
 #include <random>
 #define _USE_MATH_DEFINES
 #include <math.h>
+#include <string>
 
 void Display::make_world()
 {	
 	world = new SuperChunk;
 
-	float x_factor = 1.0f / (BLOCKS_X*CHUNKS_X - 1);
-	float z_factor = 1.0f / (BLOCKS_Z*CHUNKS_Z - 1);
+	float x_factor = 1.0f / (BLOCKS_X*CHUNKS_X);
+	float z_factor = 1.0f / (BLOCKS_Z*CHUNKS_Z);
 
 	for (int x = 0; x < CHUNKS_X*BLOCKS_X; ++x)
 	{
@@ -30,9 +32,44 @@ void Display::make_world()
 			noise *= BLOCKS_Y*CHUNKS_Y;
 			int xz_height = (int)noise;
 
+			int block_type;
+			int below = 0;
+
 			for (int y = 0; y < xz_height; ++y)
 			{
-				world->set(x, y, z, rand() % 100);
+				// rock bottom
+				if (y < 3)
+				{
+					block_type = 3;
+				}
+				// rock almost bottom with 40% chance
+				else if (y < 5)
+				{
+					if (rand() < RAND_MAX * 0.4)
+					{
+						block_type = 3;
+					}
+					else
+					{
+						block_type = 1;
+					}
+				}//*/
+				// else dirt and grass
+				else
+				{
+					block_type = 1;
+				}
+				//*/
+
+				world->set(x, y, z, block_type);
+				
+				// change below grass to dirt if needed
+				if (y > 0 && below == 1 && (block_type == 1 || block_type == 3))
+				{
+					world->set(x, y - 1, z, 2);
+				}
+				//*/
+				below = block_type;
 			}
 		}
 	}
@@ -85,7 +122,7 @@ bool Display::setup(int argc, char* argv[])
 
 	previous_time_fps = glfwGetTime();
 
-	position = glm::vec3(BLOCKS_X*CHUNKS_X / 2.0, BLOCKS_Y*CHUNKS_Y, BLOCKS_Z*CHUNKS_Z / 2.0);
+	position = glm::vec3(BLOCKS_X*CHUNKS_X / 2.0, BLOCKS_Y*CHUNKS_Y / 2.0, BLOCKS_Z*CHUNKS_Z / 2.0);
 
 	std::cout << "Setup successful." << std::endl;
 	return true;
@@ -106,6 +143,7 @@ void Display::start()
 		render();
 	}
 
+	glDeleteTextures(1, &texture);
 	glDeleteProgram(program);
 	glfwDestroyWindow(window);
 	glfwTerminate();
@@ -140,8 +178,39 @@ bool Display::setup_program()
         std::cerr << "Could not bind u_mvp" << std::endl;
         return false;
     }
+
+	load_texture_from_file("texture.png");
     
     return true;
+}
+
+void Display::load_texture_from_file(const char* path)
+{
+	std::vector<unsigned char> image;
+	unsigned int texture_w, texture_h, lodepng_error;
+	lodepng_error = lodepng::decode(image, texture_w, texture_h, path);
+	if (lodepng_error)
+	{
+		std::cout << "decoder error " << lodepng_error << ": " << lodepng_error_text(lodepng_error) << std::endl;
+	}
+
+	// flip vertically, OpenGL expects origin bottom left
+	std::vector<unsigned char> texture_image;
+	for (int y = texture_h - 1; y > -1; --y)
+	{
+		for (int x = 0; x < texture_w; ++x)
+		{
+			for (int rgba = 0; rgba < 4; ++rgba)
+			{
+				texture_image.push_back( image.at(y * texture_w * 4 + x * 4 + rgba) );
+			}
+		}
+	}
+
+	glGenTextures(1, &texture);
+	glBindTexture(GL_TEXTURE_2D, texture);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, texture_w, texture_h, 0, GL_RGBA, GL_UNSIGNED_BYTE, &texture_image[0]);
 }
 
 void Display::set_model_translation(int x, int y, int z)
@@ -156,6 +225,11 @@ void Display::set_model_translation(int x, int y, int z)
 void Display::render()
 {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+	glActiveTexture(GL_TEXTURE0);
+	glUniform1i(u_texture, 0);
+	glBindTexture(GL_TEXTURE_2D, texture);
+
 	world->render(this);
 	glfwSwapBuffers(window);
 	glfwPollEvents();
@@ -207,8 +281,6 @@ void Display::error_callback(int error, const char* description)
 
 void Display::key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
-	
-
 	if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
 	{
 		glfwSetWindowShouldClose(window, GLFW_TRUE);
@@ -245,6 +317,8 @@ void Display::key_callback(GLFWwindow* window, int key, int scancode, int action
 	{
 		move &= ~backward;
 	}
+
+	//std::cout << "Position: " << glm::to_string(position) << std::endl;
 }
 
 void Display::show_fps()
@@ -272,19 +346,21 @@ void Display::cursor_position(GLFWwindow* window, double x, double y)
 		angles.x -= M_PI * 2;
 	}
 
-	if (angles.y < -M_PI / 2)
+	if (angles.y < -M_PI / 2 + 0.001)
 	{
-		angles.y = -M_PI / 2;
+		angles.y = -M_PI / 2 + 0.001;
 	}
-	else if (angles.y > M_PI / 2)
+	else if (angles.y > M_PI / 2 - 0.001)
 	{
-		angles.y = M_PI / 2;
+		angles.y = M_PI / 2 - 0.001;
 	}
 
 	look_at.x = sinf(angles.x) * cosf(angles.y);
 	look_at.y = sinf(angles.y);
 	look_at.z = cosf(angles.x) * cosf(angles.y);
 
+	//std::cout << "Looking at: " << glm::to_string(look_at) << std::endl;
+	
 	cursor_x = x;
 	cursor_y = y;
 }

@@ -21,12 +21,12 @@ Chunk::~Chunk()
 	glDeleteBuffers(1, &vbo);
 }
 
-uint8_t Chunk::get(int x, int y, int z)
+int Chunk::get(int x, int y, int z)
 {
 	return blocks[x][y][y];
 }
 
-void Chunk::set(int x, int y, int z, uint8_t block_type)
+void Chunk::set(int x, int y, int z, int block_type)
 {
 	blocks[x][y][z] = block_type;
 	changed = true;
@@ -45,7 +45,16 @@ void Chunk::update()
 		{
 			for (int z = 0; z < BLOCKS_Z; ++z)
 			{
-				uint8_t block_type = blocks[x][y][z];
+				int block_type = blocks[x][y][z];
+				int block_type_top = -block_type;
+				int block_type_bottom = -block_type;
+				
+				// grass top and bottom
+				if (block_type == 1)
+				{
+					block_type_top = -15;
+					block_type_bottom = -2;
+				}
 
 				if (!block_type)
 				{
@@ -53,52 +62,72 @@ void Chunk::update()
 				}
 
 				// from -x
-				vertices[i++] = byte4(x, y, z, block_type);
-				vertices[i++] = byte4(x, y, z + 1, block_type);
-				vertices[i++] = byte4(x, y + 1, z, block_type);
-				vertices[i++] = byte4(x, y + 1, z, block_type);
-				vertices[i++] = byte4(x, y, z + 1, block_type);
-				vertices[i++] = byte4(x, y + 1, z + 1, block_type);
+				if (x == 0 || (x > 0 && !blocks[x - 1][y][z]))
+				{
+					vertices[i++] = byte4(x, y, z, block_type);
+					vertices[i++] = byte4(x, y, z + 1, block_type);
+					vertices[i++] = byte4(x, y + 1, z, block_type);
+					vertices[i++] = byte4(x, y + 1, z, block_type);
+					vertices[i++] = byte4(x, y, z + 1, block_type);
+					vertices[i++] = byte4(x, y + 1, z + 1, block_type);
+				}
 
 				// from +x
-				vertices[i++] = byte4(x + 1, y, z, block_type);
-				vertices[i++] = byte4(x + 1, y + 1, z, block_type);
-				vertices[i++] = byte4(x + 1, y, z + 1, block_type);
-				vertices[i++] = byte4(x + 1, y, z + 1, block_type);
-				vertices[i++] = byte4(x + 1, y + 1, z, block_type);
-				vertices[i++] = byte4(x + 1, y + 1, z + 1, block_type);
-
+				if (x == BLOCKS_X - 1 || (x < BLOCKS_X - 1 && !blocks[x + 1][y][z]))
+				{
+					vertices[i++] = byte4(x + 1, y, z, block_type);
+					vertices[i++] = byte4(x + 1, y + 1, z, block_type);
+					vertices[i++] = byte4(x + 1, y, z + 1, block_type);
+					vertices[i++] = byte4(x + 1, y, z + 1, block_type);
+					vertices[i++] = byte4(x + 1, y + 1, z, block_type);
+					vertices[i++] = byte4(x + 1, y + 1, z + 1, block_type);
+				}
+				
 				// from -y
-				vertices[i++] = byte4(x, y, z, block_type);
-				vertices[i++] = byte4(x + 1, y, z, block_type);
-				vertices[i++] = byte4(x + 1, y, z + 1, block_type);
-				vertices[i++] = byte4(x + 1, y, z + 1, block_type);
-				vertices[i++] = byte4(x, y, z + 1, block_type);
-				vertices[i++] = byte4(x, y, z, block_type);
+				if (y == 0 || (y > 0 && !blocks[x][y - 1][z]))
+				{
+					vertices[i++] = byte4(x, y, z, block_type_bottom);
+					vertices[i++] = byte4(x + 1, y, z, block_type_bottom);
+					vertices[i++] = byte4(x + 1, y, z + 1, block_type_bottom);
+					vertices[i++] = byte4(x + 1, y, z + 1, block_type_bottom);
+					vertices[i++] = byte4(x, y, z + 1, block_type_bottom);
+					vertices[i++] = byte4(x, y, z, block_type_bottom);
+				}
+				
 
 				// from +y
-				vertices[i++] = byte4(x, y + 1, z, block_type);
-				vertices[i++] = byte4(x + 1, y + 1, z + 1, block_type);
-				vertices[i++] = byte4(x + 1, y + 1, z, block_type);
-				vertices[i++] = byte4(x, y + 1, z, block_type);
-				vertices[i++] = byte4(x, y + 1, z + 1, block_type);
-				vertices[i++] = byte4(x + 1, y + 1, z + 1, block_type);
+				if (y == BLOCKS_Y - 1 || (y < BLOCKS_Y - 1 && !blocks[x][y + 1][z]))
+				{
+					vertices[i++] = byte4(x, y + 1, z, block_type_top);
+					vertices[i++] = byte4(x + 1, y + 1, z + 1, block_type_top);
+					vertices[i++] = byte4(x + 1, y + 1, z, block_type_top);
+					vertices[i++] = byte4(x, y + 1, z, block_type_top);
+					vertices[i++] = byte4(x, y + 1, z + 1, block_type_top);
+					vertices[i++] = byte4(x + 1, y + 1, z + 1, block_type_top);
+				}
 
 				// from -z
-				vertices[i++] = byte4(x, y, z, block_type);
-				vertices[i++] = byte4(x, y + 1, z, block_type);
-				vertices[i++] = byte4(x + 1, y + 1, z, block_type);
-				vertices[i++] = byte4(x + 1, y + 1, z, block_type);
-				vertices[i++] = byte4(x + 1, y, z, block_type);
-				vertices[i++] = byte4(x, y, z, block_type);
+				if (z == 0 || (z > 0 && !blocks[x][y][z - 1]))
+				{
+					vertices[i++] = byte4(x, y, z, block_type);
+					vertices[i++] = byte4(x, y + 1, z, block_type);
+					vertices[i++] = byte4(x + 1, y + 1, z, block_type);
+					vertices[i++] = byte4(x + 1, y + 1, z, block_type);
+					vertices[i++] = byte4(x + 1, y, z, block_type);
+					vertices[i++] = byte4(x, y, z, block_type);
+				}
+				
 
 				// from +z
-				vertices[i++] = byte4(x, y, z + 1, block_type);
-				vertices[i++] = byte4(x + 1, y, z + 1, block_type);
-				vertices[i++] = byte4(x + 1, y + 1, z + 1, block_type);
-				vertices[i++] = byte4(x + 1, y + 1, z + 1, block_type);
-				vertices[i++] = byte4(x, y + 1, z + 1, block_type);
-				vertices[i++] = byte4(x, y, z + 1, block_type);
+				if (z == BLOCKS_Z - 1 || (z < BLOCKS_Z - 1 && !blocks[x][y][z + 1]))
+				{
+					vertices[i++] = byte4(x, y, z + 1, block_type);
+					vertices[i++] = byte4(x + 1, y, z + 1, block_type);
+					vertices[i++] = byte4(x + 1, y + 1, z + 1, block_type);
+					vertices[i++] = byte4(x + 1, y + 1, z + 1, block_type);
+					vertices[i++] = byte4(x, y + 1, z + 1, block_type);
+					vertices[i++] = byte4(x, y, z + 1, block_type);
+				}
 			}
 		}
 	}
@@ -144,7 +173,7 @@ SuperChunk::~SuperChunk()
 	}
 }
 
-uint8_t SuperChunk::get(int x, int y, int z)
+int SuperChunk::get(int x, int y, int z)
 {
 	int chunk_x = x / BLOCKS_X;
 	int chunk_y = y / BLOCKS_Y;
@@ -164,7 +193,7 @@ uint8_t SuperChunk::get(int x, int y, int z)
 	}
 }
 
-void SuperChunk::set(int x, int y, int z, uint8_t block_type)
+void SuperChunk::set(int x, int y, int z, int block_type)
 {
 	int chunk_x = x / BLOCKS_X;
 	int chunk_y = y / BLOCKS_Y;

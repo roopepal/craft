@@ -19,6 +19,7 @@ private:
 	double previous_time_fps;
 
     GLuint program;
+	GLuint texture;
     GLint vs;
     GLint fs;
 
@@ -54,6 +55,7 @@ private:
 	static void key_callback_wrapper(GLFWwindow* window, int key, int scancode, int action, int mods);
 	static void cursor_position_wrapper(GLFWwindow* window, double x, double y);
 
+	void load_texture_from_file(const char* path);
 	void set_instance();
     bool setup_program();
 	void show_fps();
@@ -65,6 +67,7 @@ private:
 public:
 	GLint a_coord;
 	GLint u_mvp;
+	GLint u_texture;
 
 	void set_model_translation(int x, int y, int z);
     bool setup(int argc, char* argv[]);

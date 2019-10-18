@@ -3,7 +3,7 @@
 
 int main(int argc, char* argv[])
 {
-	Display d = Display("Craft", 896, 504);
+	Display d = Display("Craft", 1280, 768);
 	if (d.setup(argc, argv))
 	{
 		d.start();
