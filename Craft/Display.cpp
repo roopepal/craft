@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "Display.hpp"
 #include "Chunk.h"
+#include "Noise.h"
 #include "shader.hpp"
 #include "lodepng.h"
 #include "glm/glm.hpp"
@@ -21,29 +22,30 @@ void Display::make_world()
 	float x_factor = 1.0f / (BLOCKS_X*CHUNKS_X);
 	float z_factor = 1.0f / (BLOCKS_Z*CHUNKS_Z);
 
+	std::vector<std::vector<float>> noise_map = Noise::perlin(
+		BLOCKS_X*CHUNKS_X, BLOCKS_Z*CHUNKS_Z, 1234, 1.0f, 4, 0.5f, 2, glm::vec2(0, 0));
+
 	for (int x = 0; x < CHUNKS_X*BLOCKS_X; ++x)
 	{
 		for (int z = 0; z < CHUNKS_Z*BLOCKS_Z; ++z)
 		{
-			float noise = glm::perlin(glm::vec2(x * x_factor, z * z_factor));
-			// scale 0 to BLOCKS_Y*CHUNKS_Y
-			noise += 1.0f;
-			noise /= 2.0f;
-			noise *= BLOCKS_Y*CHUNKS_Y;
-			int xz_height = (int)noise;
+			float noise = noise_map.at(x).at(z) * BLOCKS_Y * CHUNKS_Y;
+			int xz_height = int(noise);
 
 			int block_type;
 			int below = 0;
 
+			const int max_y = BLOCKS_Y * CHUNKS_Y;
+
 			for (int y = 0; y < xz_height; ++y)
 			{
 				// rock bottom
-				if (y < 3)
+				if (y < max_y * 0.1)
 				{
 					block_type = 3;
 				}
 				// rock almost bottom with 40% chance
-				else if (y < 5)
+				else if (y < max_y * 0.13)
 				{
 					if (rand() < RAND_MAX * 0.4)
 					{
@@ -53,20 +55,41 @@ void Display::make_world()
 					{
 						block_type = 1;
 					}
-				}//*/
-				// grass and water
-				else
+				}
+				// dirt and grass
+				else if (y < max_y * 0.7)
 				{
-					if (rand() < RAND_MAX * 0.4)
+					block_type = 1;
+				}
+				// mountain top rock
+				else if (y < max_y * 0.8)
+				{
+					if (rand() < RAND_MAX * 0.1)
 					{
-						block_type = 4;
+						block_type = 16;
 					}
 					else
 					{
-						block_type = 1;
+						block_type = 3;
 					}
 				}
-				//*/
+				else if (y < max_y * 0.85)
+				{
+					if (rand() < RAND_MAX * 0.5)
+					{
+						block_type = 16;
+					}
+					else
+					{
+						block_type = 3;
+					}
+				}
+				// mountain top snow
+				else
+				{
+					block_type = 16;
+				}
+				
 
 				world->set(x, y, z, block_type);
 				
@@ -129,7 +152,7 @@ bool Display::setup(int argc, char* argv[])
 
 	previous_time_fps = glfwGetTime();
 
-	position = glm::vec3(BLOCKS_X*CHUNKS_X / 2.0, BLOCKS_Y*CHUNKS_Y / 2.0, BLOCKS_Z*CHUNKS_Z / 2.0);
+	position = glm::vec3(BLOCKS_X*CHUNKS_X / 2.0, BLOCKS_Y*CHUNKS_Y, BLOCKS_Z*CHUNKS_Z / 2.0);
 
 	std::cout << "Setup successful." << std::endl;
 	return true;

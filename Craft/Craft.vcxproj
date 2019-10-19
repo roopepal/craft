@@ -172,6 +172,7 @@
     <ClInclude Include="Chunk.h" />
     <ClInclude Include="Display.hpp" />
     <ClInclude Include="lodepng.h" />
+    <ClInclude Include="Noise.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="shader.hpp" />
@@ -181,6 +182,7 @@
     <ClCompile Include="Craft.cpp" />
     <ClCompile Include="Display.cpp" />
     <ClCompile Include="lodepng.cpp" />
+    <ClCompile Include="Noise.cpp" />
     <ClCompile Include="pch.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
