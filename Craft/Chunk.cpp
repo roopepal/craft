@@ -5,20 +5,26 @@
 #include "Display.hpp"
 #include <stdint.h>
 #include <cstring>
+#include <vector>
 
 typedef glm::tvec4<GLbyte> byte4;
 
 Chunk::Chunk()
 {
 	memset(blocks, 0, sizeof(blocks));
-	n_vertices = 0;
+	memset(vertices_opaque, 0, sizeof(vertices_opaque));
+	memset(vertices_transparent, 0, sizeof(vertices_transparent));
+	n_opaque = 0;
+	n_transparent = 0;
 	changed = true;
-	glGenBuffers(1, &vbo);
+	glGenBuffers(1, &vbo_opaque);
+	glGenBuffers(1, &vbo_transparent);
 }
 
 Chunk::~Chunk()
 {
-	glDeleteBuffers(1, &vbo);
+	glDeleteBuffers(1, &vbo_opaque);
+	glDeleteBuffers(1, &vbo_transparent);
 }
 
 int Chunk::get(int x, int y, int z)
@@ -36,8 +42,8 @@ void Chunk::update()
 {
 	changed = false;
 
-	byte4 vertices[BLOCKS_X * BLOCKS_Y * BLOCKS_Z * 6 * 6];
-	int i = 0;
+	n_opaque = 0;
+	n_transparent = 0;
 
 	for (int x = 0; x < BLOCKS_X; ++x)
 	{
@@ -61,80 +67,84 @@ void Chunk::update()
 					continue;
 				}
 
+				byte4* vertices = block_type == 9 ? vertices_transparent : vertices_opaque;
+				int &n_vertices = block_type == 9 ? n_transparent : n_opaque;
+
 				// from -x
-				if (x == 0 || (x > 0 && !blocks[x - 1][y][z]))
+				if (x == 0 || (x > 0 && (!blocks[x - 1][y][z] || blocks[x - 1][y][z] == 9)))
 				{
-					vertices[i++] = byte4(x, y, z, block_type);
-					vertices[i++] = byte4(x, y, z + 1, block_type);
-					vertices[i++] = byte4(x, y + 1, z, block_type);
-					vertices[i++] = byte4(x, y + 1, z, block_type);
-					vertices[i++] = byte4(x, y, z + 1, block_type);
-					vertices[i++] = byte4(x, y + 1, z + 1, block_type);
+					vertices[n_vertices++] = byte4(x, y, z, block_type);
+					vertices[n_vertices++] = byte4(x, y, z + 1, block_type);
+					vertices[n_vertices++] = byte4(x, y + 1, z, block_type);
+					vertices[n_vertices++] = byte4(x, y + 1, z, block_type);
+					vertices[n_vertices++] = byte4(x, y, z + 1, block_type);
+					vertices[n_vertices++] = byte4(x, y + 1, z + 1, block_type);
 				}
 
 				// from +x
-				if (x == BLOCKS_X - 1 || (x < BLOCKS_X - 1 && !blocks[x + 1][y][z]))
+				if (x == BLOCKS_X - 1 || (x < BLOCKS_X - 1 && (!blocks[x + 1][y][z] || blocks[x + 1][y][z] == 9)))
 				{
-					vertices[i++] = byte4(x + 1, y, z, block_type);
-					vertices[i++] = byte4(x + 1, y + 1, z, block_type);
-					vertices[i++] = byte4(x + 1, y, z + 1, block_type);
-					vertices[i++] = byte4(x + 1, y, z + 1, block_type);
-					vertices[i++] = byte4(x + 1, y + 1, z, block_type);
-					vertices[i++] = byte4(x + 1, y + 1, z + 1, block_type);
+					vertices[n_vertices++] = byte4(x + 1, y, z, block_type);
+					vertices[n_vertices++] = byte4(x + 1, y + 1, z, block_type);
+					vertices[n_vertices++] = byte4(x + 1, y, z + 1, block_type);
+					vertices[n_vertices++] = byte4(x + 1, y, z + 1, block_type);
+					vertices[n_vertices++] = byte4(x + 1, y + 1, z, block_type);
+					vertices[n_vertices++] = byte4(x + 1, y + 1, z + 1, block_type);
 				}
 				
 				// from -y
-				if (y == 0 || (y > 0 && !blocks[x][y - 1][z]))
+				if (y == 0 || (y > 0 && (!blocks[x][y - 1][z] || blocks[x][y - 1][z] == 9)))
 				{
-					vertices[i++] = byte4(x, y, z, block_type_bottom);
-					vertices[i++] = byte4(x + 1, y, z, block_type_bottom);
-					vertices[i++] = byte4(x + 1, y, z + 1, block_type_bottom);
-					vertices[i++] = byte4(x + 1, y, z + 1, block_type_bottom);
-					vertices[i++] = byte4(x, y, z + 1, block_type_bottom);
-					vertices[i++] = byte4(x, y, z, block_type_bottom);
+					vertices[n_vertices++] = byte4(x, y, z, block_type_bottom);
+					vertices[n_vertices++] = byte4(x + 1, y, z, block_type_bottom);
+					vertices[n_vertices++] = byte4(x + 1, y, z + 1, block_type_bottom);
+					vertices[n_vertices++] = byte4(x + 1, y, z + 1, block_type_bottom);
+					vertices[n_vertices++] = byte4(x, y, z + 1, block_type_bottom);
+					vertices[n_vertices++] = byte4(x, y, z, block_type_bottom);
 				}
 				
 
 				// from +y
-				if (y == BLOCKS_Y - 1 || (y < BLOCKS_Y - 1 && !blocks[x][y + 1][z]))
+				if (y == BLOCKS_Y - 1 || (y < BLOCKS_Y - 1 && (!blocks[x][y + 1][z] || blocks[x][y + 1][z] == 9)))
 				{
-					vertices[i++] = byte4(x, y + 1, z, block_type_top);
-					vertices[i++] = byte4(x + 1, y + 1, z + 1, block_type_top);
-					vertices[i++] = byte4(x + 1, y + 1, z, block_type_top);
-					vertices[i++] = byte4(x, y + 1, z, block_type_top);
-					vertices[i++] = byte4(x, y + 1, z + 1, block_type_top);
-					vertices[i++] = byte4(x + 1, y + 1, z + 1, block_type_top);
+					vertices[n_vertices++] = byte4(x, y + 1, z, block_type_top);
+					vertices[n_vertices++] = byte4(x + 1, y + 1, z + 1, block_type_top);
+					vertices[n_vertices++] = byte4(x + 1, y + 1, z, block_type_top);
+					vertices[n_vertices++] = byte4(x, y + 1, z, block_type_top);
+					vertices[n_vertices++] = byte4(x, y + 1, z + 1, block_type_top);
+					vertices[n_vertices++] = byte4(x + 1, y + 1, z + 1, block_type_top);
 				}
 
 				// from -z
-				if (z == 0 || (z > 0 && !blocks[x][y][z - 1]))
+				if (z == 0 || (z > 0 && (!blocks[x][y][z - 1] || blocks[x][y][z - 1] == 9)))
 				{
-					vertices[i++] = byte4(x, y, z, block_type);
-					vertices[i++] = byte4(x, y + 1, z, block_type);
-					vertices[i++] = byte4(x + 1, y + 1, z, block_type);
-					vertices[i++] = byte4(x + 1, y + 1, z, block_type);
-					vertices[i++] = byte4(x + 1, y, z, block_type);
-					vertices[i++] = byte4(x, y, z, block_type);
+					vertices[n_vertices++] = byte4(x, y, z, block_type);
+					vertices[n_vertices++] = byte4(x, y + 1, z, block_type);
+					vertices[n_vertices++] = byte4(x + 1, y + 1, z, block_type);
+					vertices[n_vertices++] = byte4(x + 1, y + 1, z, block_type);
+					vertices[n_vertices++] = byte4(x + 1, y, z, block_type);
+					vertices[n_vertices++] = byte4(x, y, z, block_type);
 				}
 				
 
 				// from +z
-				if (z == BLOCKS_Z - 1 || (z < BLOCKS_Z - 1 && !blocks[x][y][z + 1]))
+				if (z == BLOCKS_Z - 1 || (z < BLOCKS_Z - 1 && (!blocks[x][y][z + 1] || blocks[x][y][z + 1] == 9)))
 				{
-					vertices[i++] = byte4(x, y, z + 1, block_type);
-					vertices[i++] = byte4(x + 1, y, z + 1, block_type);
-					vertices[i++] = byte4(x + 1, y + 1, z + 1, block_type);
-					vertices[i++] = byte4(x + 1, y + 1, z + 1, block_type);
-					vertices[i++] = byte4(x, y + 1, z + 1, block_type);
-					vertices[i++] = byte4(x, y, z + 1, block_type);
+					vertices[n_vertices++] = byte4(x, y, z + 1, block_type);
+					vertices[n_vertices++] = byte4(x + 1, y, z + 1, block_type);
+					vertices[n_vertices++] = byte4(x + 1, y + 1, z + 1, block_type);
+					vertices[n_vertices++] = byte4(x + 1, y + 1, z + 1, block_type);
+					vertices[n_vertices++] = byte4(x, y + 1, z + 1, block_type);
+					vertices[n_vertices++] = byte4(x, y, z + 1, block_type);
 				}
 			}
 		}
 	}
 
-	n_vertices = i;
-	glBindBuffer(GL_ARRAY_BUFFER, vbo);
-	glBufferData(GL_ARRAY_BUFFER, n_vertices * sizeof *vertices, vertices, GL_STATIC_DRAW);
+	glBindBuffer(GL_ARRAY_BUFFER, vbo_opaque);
+	glBufferData(GL_ARRAY_BUFFER, n_opaque * sizeof(byte4), vertices_opaque, GL_STATIC_DRAW);
+	glBindBuffer(GL_ARRAY_BUFFER, vbo_transparent);
+	glBufferData(GL_ARRAY_BUFFER, n_transparent * sizeof(byte4), vertices_transparent, GL_STATIC_DRAW);
 }
 
 void Chunk::render(Display* display)
@@ -144,14 +154,18 @@ void Chunk::render(Display* display)
 		update();
 	}
 
-	if (!n_vertices)
+	if (n_opaque > 0)
 	{
-		return;
+		glBindBuffer(GL_ARRAY_BUFFER, vbo_opaque);
+		glVertexAttribPointer(display->a_coord, 4, GL_BYTE, GL_FALSE, 0, 0);
+		glDrawArrays(GL_TRIANGLES, 0, n_opaque);
 	}
-
-	glBindBuffer(GL_ARRAY_BUFFER, vbo);
-	glVertexAttribPointer(display->a_coord, 4, GL_BYTE, GL_FALSE, 0, 0);
-	glDrawArrays(GL_TRIANGLES, 0, n_vertices);
+	if (n_transparent > 0)
+	{
+		glBindBuffer(GL_ARRAY_BUFFER, vbo_transparent);
+		glVertexAttribPointer(display->a_coord, 4, GL_BYTE, GL_FALSE, 0, 0);
+		glDrawArrays(GL_TRIANGLES, 0, n_transparent);
+	}
 }
 
 SuperChunk::SuperChunk()

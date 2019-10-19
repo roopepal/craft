@@ -57,7 +57,14 @@ void Display::make_world()
 				// else dirt and grass
 				else
 				{
-					block_type = 1;
+					if (rand() < RAND_MAX * 0.4)
+					{
+						block_type = 9;
+					}
+					else
+					{
+						block_type = 1;
+					}
 				}
 				//*/
 
@@ -134,7 +141,9 @@ void Display::start()
 	glUseProgram(program);
 	glEnable(GL_CULL_FACE);
 	glEnable(GL_DEPTH_TEST);
-	glClearColor(0.5, 0.7, 1.0, 0.0);
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	glClearColor(0.5, 0.7, 1.0, 1.0);
 	glEnableVertexAttribArray(a_coord);
 
 	while (!glfwWindowShouldClose(window))

@@ -9,15 +9,21 @@
 constexpr int BLOCKS_X = 16;
 constexpr int BLOCKS_Y = 16;
 constexpr int BLOCKS_Z = 16;
-constexpr int CHUNKS_X = 4;
-constexpr int CHUNKS_Y = 2;
-constexpr int CHUNKS_Z = 4;
+constexpr int CHUNKS_X = 1;
+constexpr int CHUNKS_Y = 1;
+constexpr int CHUNKS_Z = 1;
+
+typedef glm::tvec4<GLbyte> byte4;
 
 struct Chunk
 {
 	int blocks[BLOCKS_X][BLOCKS_Y][BLOCKS_Z];
-	GLuint vbo;
-	int n_vertices;
+	byte4 vertices_opaque[BLOCKS_X * BLOCKS_Y * BLOCKS_Z * 6 * 6];
+	byte4 vertices_transparent[BLOCKS_X * BLOCKS_Y * BLOCKS_Z * 6 * 6];
+	int n_opaque;
+	int n_transparent;
+	GLuint vbo_opaque;
+	GLuint vbo_transparent;
 	bool changed;
 
 	int get(int x, int y, int z);

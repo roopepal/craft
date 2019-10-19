@@ -25,7 +25,8 @@ void main()
 	{
 		float x = clamp(fract(texcoord.x + texcoord.z), 0.01, 0.99) / w + mod((texcoord.w - 1.0), w) / w;
 		float y = clamp(fract(texcoord.y), 0.01, 0.99) / h + int((texcoord.w - 1.0 - 0.001) / w) / h;
-		color = texture2D(u_texture, vec2(x, y)) * 0.8;
+		color = texture2D(u_texture, vec2(x, y));
+		color.xyz *= 0.8; // shadow sides
 	}
 
 	float z = gl_FragCoord.z / gl_FragCoord.w; // distance to camera

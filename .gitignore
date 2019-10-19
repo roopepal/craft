@@ -262,3 +262,4 @@ __pycache__/
 /Craft/glm
 /Craft/glew32.dll
 /Craft/glfw3.dll
+/Craft/texture_notransparency.png
