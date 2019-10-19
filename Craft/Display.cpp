@@ -22,6 +22,8 @@ void Display::make_world()
 	float x_factor = 1.0f / (BLOCKS_X*CHUNKS_X);
 	float z_factor = 1.0f / (BLOCKS_Z*CHUNKS_Z);
 
+	int water_height = CHUNKS_Y * BLOCKS_Y * 0.18;
+
 	std::vector<std::vector<float>> noise_map = Noise::perlin(
 		BLOCKS_X*CHUNKS_X, BLOCKS_Z*CHUNKS_Z, 1234, 1.0f, 4, 0.5f, 2, glm::vec2(0, 0));
 
@@ -29,8 +31,9 @@ void Display::make_world()
 	{
 		for (int z = 0; z < CHUNKS_Z*BLOCKS_Z; ++z)
 		{
-			float noise = noise_map.at(x).at(z) * BLOCKS_Y * CHUNKS_Y;
-			int xz_height = int(noise);
+			// get height in range [1, BLOCKS_Y * CHUNKS_Y]
+			float noise = noise_map.at(x).at(z) * BLOCKS_Y * CHUNKS_Y - 1;
+			int xz_height = int(noise) + 1;
 
 			int block_type;
 			int below = 0;
@@ -53,8 +56,13 @@ void Display::make_world()
 					}
 					else
 					{
-						block_type = 1;
+						block_type = 5;
 					}
+				}
+				// sand
+				else if (y < max_y * 0.2)
+				{
+					block_type = 5;
 				}
 				// dirt and grass
 				else if (y < max_y * 0.7)
@@ -89,10 +97,9 @@ void Display::make_world()
 				{
 					block_type = 16;
 				}
-				
 
 				world->set(x, y, z, block_type);
-				
+
 				// change below grass to dirt if needed
 				if (y > 0 && below == 1 && (block_type == 1 || block_type == 3))
 				{
@@ -100,6 +107,12 @@ void Display::make_world()
 				}
 				//*/
 				below = block_type;
+			}
+
+			// water
+			for (int y = xz_height; y < water_height; ++y)
+			{
+				world->set(x, y, z, 4);
 			}
 		}
 	}
