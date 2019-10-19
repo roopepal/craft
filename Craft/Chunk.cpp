@@ -68,7 +68,7 @@ void Chunk::update()
 					continue;
 				}
 				
-				bool self_tp = block_type == 9;
+				bool self_tp = block_type == 9 || block_type == 4;
 				
 				// has neighbor
 				int x_next = x < BLOCKS_X - 1 ? blocks[x + 1][y][z] : 0;
@@ -79,12 +79,12 @@ void Chunk::update()
 				int z_prev = z > 0 ? blocks[x][y][z - 1] : 0;
 
 				// has transparent neighbor
-				int x_next_tp = x_next == 9;
-				int y_next_tp = y_next == 9;
-				int z_next_tp = z_next == 9;
-				int x_prev_tp = x_prev == 9;
-				int y_prev_tp = y_prev == 9;
-				int z_prev_tp = z_prev == 9;
+				int x_next_tp = x_next == 9 || x_next == 4;
+				int y_next_tp = y_next == 9 || y_next == 4;
+				int z_next_tp = z_next == 9 || z_next == 4;
+				int x_prev_tp = x_prev == 9 || x_prev == 4;
+				int y_prev_tp = y_prev == 9 || y_prev == 4;
+				int z_prev_tp = z_prev == 9 || z_prev == 4;
 
 				byte4* vertices = self_tp ? vertices_transparent : vertices_opaque;
 				int &n_vertices = self_tp ? n_transparent : n_opaque;

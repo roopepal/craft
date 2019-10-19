@@ -54,12 +54,12 @@ void Display::make_world()
 						block_type = 1;
 					}
 				}//*/
-				// else dirt and grass
+				// grass and water
 				else
 				{
 					if (rand() < RAND_MAX * 0.4)
 					{
-						block_type = 9;
+						block_type = 4;
 					}
 					else
 					{
