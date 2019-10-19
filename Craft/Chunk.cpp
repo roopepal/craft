@@ -6,6 +6,7 @@
 #include <stdint.h>
 #include <cstring>
 #include <vector>
+#include <iostream>
 
 typedef glm::tvec4<GLbyte> byte4;
 
@@ -66,12 +67,30 @@ void Chunk::update()
 				{
 					continue;
 				}
+				
+				bool self_tp = block_type == 9;
+				
+				// has neighbor
+				int x_next = x < BLOCKS_X - 1 ? blocks[x + 1][y][z] : 0;
+				int y_next = y < BLOCKS_Y - 1 ? blocks[x][y + 1][z] : 0;
+				int z_next = z < BLOCKS_Z - 1 ? blocks[x][y][z + 1] : 0;
+				int x_prev = x > 0 ? blocks[x - 1][y][z] : 0;
+				int y_prev = y > 0 ? blocks[x][y - 1][z] : 0;
+				int z_prev = z > 0 ? blocks[x][y][z - 1] : 0;
 
-				byte4* vertices = block_type == 9 ? vertices_transparent : vertices_opaque;
-				int &n_vertices = block_type == 9 ? n_transparent : n_opaque;
+				// has transparent neighbor
+				int x_next_tp = x_next == 9;
+				int y_next_tp = y_next == 9;
+				int z_next_tp = z_next == 9;
+				int x_prev_tp = x_prev == 9;
+				int y_prev_tp = y_prev == 9;
+				int z_prev_tp = z_prev == 9;
+
+				byte4* vertices = self_tp ? vertices_transparent : vertices_opaque;
+				int &n_vertices = self_tp ? n_transparent : n_opaque;
 
 				// from -x
-				if (x == 0 || (x > 0 && (!blocks[x - 1][y][z] || blocks[x - 1][y][z] == 9)))
+				if ((x == 0 || !x_prev || x_prev_tp) && !(self_tp && x_prev))
 				{
 					vertices[n_vertices++] = byte4(x, y, z, block_type);
 					vertices[n_vertices++] = byte4(x, y, z + 1, block_type);
@@ -82,7 +101,7 @@ void Chunk::update()
 				}
 
 				// from +x
-				if (x == BLOCKS_X - 1 || (x < BLOCKS_X - 1 && (!blocks[x + 1][y][z] || blocks[x + 1][y][z] == 9)))
+				if ((x == BLOCKS_X - 1 || !x_next || x_next_tp) && !(self_tp && x_next))
 				{
 					vertices[n_vertices++] = byte4(x + 1, y, z, block_type);
 					vertices[n_vertices++] = byte4(x + 1, y + 1, z, block_type);
@@ -93,7 +112,7 @@ void Chunk::update()
 				}
 				
 				// from -y
-				if (y == 0 || (y > 0 && (!blocks[x][y - 1][z] || blocks[x][y - 1][z] == 9)))
+				if ((y == 0 || !y_prev || y_prev_tp) && !(self_tp && y_prev))
 				{
 					vertices[n_vertices++] = byte4(x, y, z, block_type_bottom);
 					vertices[n_vertices++] = byte4(x + 1, y, z, block_type_bottom);
@@ -105,7 +124,7 @@ void Chunk::update()
 				
 
 				// from +y
-				if (y == BLOCKS_Y - 1 || (y < BLOCKS_Y - 1 && (!blocks[x][y + 1][z] || blocks[x][y + 1][z] == 9)))
+				if ((y == BLOCKS_Y - 1 || !y_next || y_next_tp) && !(self_tp && y_next))
 				{
 					vertices[n_vertices++] = byte4(x, y + 1, z, block_type_top);
 					vertices[n_vertices++] = byte4(x + 1, y + 1, z + 1, block_type_top);
@@ -116,7 +135,7 @@ void Chunk::update()
 				}
 
 				// from -z
-				if (z == 0 || (z > 0 && (!blocks[x][y][z - 1] || blocks[x][y][z - 1] == 9)))
+				if ((z == 0 || !z_prev || z_prev_tp) && !(self_tp && z_prev))
 				{
 					vertices[n_vertices++] = byte4(x, y, z, block_type);
 					vertices[n_vertices++] = byte4(x, y + 1, z, block_type);
@@ -128,7 +147,7 @@ void Chunk::update()
 				
 
 				// from +z
-				if (z == BLOCKS_Z - 1 || (z < BLOCKS_Z - 1 && (!blocks[x][y][z + 1] || blocks[x][y][z + 1] == 9)))
+				if ((z == BLOCKS_Z - 1 || !z_next || z_next_tp) && !(self_tp && z_next))
 				{
 					vertices[n_vertices++] = byte4(x, y, z + 1, block_type);
 					vertices[n_vertices++] = byte4(x + 1, y, z + 1, block_type);

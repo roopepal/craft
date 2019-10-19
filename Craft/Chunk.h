@@ -9,9 +9,9 @@
 constexpr int BLOCKS_X = 16;
 constexpr int BLOCKS_Y = 16;
 constexpr int BLOCKS_Z = 16;
-constexpr int CHUNKS_X = 1;
+constexpr int CHUNKS_X = 3;
 constexpr int CHUNKS_Y = 1;
-constexpr int CHUNKS_Z = 1;
+constexpr int CHUNKS_Z = 3;
 
 typedef glm::tvec4<GLbyte> byte4;
 
