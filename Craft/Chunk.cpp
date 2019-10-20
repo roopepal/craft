@@ -178,7 +178,7 @@ void SuperChunk::update()
 				}
 
 				// from -y
-				if ((!y_prev || y_prev_tp) && !(self_tp && y_prev))
+				if ((!y_prev || y_prev_tp) && !(self_tp && y_prev) || (block_type == 4 && !y_next))
 				{
 					vertices[n_vertices++] = byte4(x, y, z, block_type_bottom);
 					vertices[n_vertices++] = byte4(x + 1, y, z, block_type_bottom);
