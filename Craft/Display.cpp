@@ -3,6 +3,7 @@
 #include "Chunk.h"
 #include "Noise.h"
 #include "shader.hpp"
+#include "World.h"
 #include "lodepng.h"
 #include "glm/glm.hpp"
 #include "glm/gtc/matrix_transform.hpp"
@@ -16,94 +17,113 @@
 #include <string>
 
 void Display::make_world()
-{	
+{
+	World world_helper;
+	world_helper.prepare_tree_indices();
+
 	world = new SuperChunk;
 
 	float x_factor = 1.0f / (BLOCKS_X*CHUNKS_X);
 	float z_factor = 1.0f / (BLOCKS_Z*CHUNKS_Z);
 
-	int water_height = CHUNKS_Y * BLOCKS_Y * 0.18;
+	const int max_y = BLOCKS_Y * CHUNKS_Y - 1;
+
+	int bedrock_height = max_y * 0.15;
+	int water_height = max_y * 0.37;
+	int sand_height = max_y * 0.4;
+	int grass_height = max_y * 0.8;
+	int mountain_rock_height = max_y * 0.9;
 
 	std::vector<std::vector<float>> noise_map = Noise::perlin(
-		BLOCKS_X*CHUNKS_X, BLOCKS_Z*CHUNKS_Z, 1234, 1.0f, 4, 0.5f, 2, glm::vec2(0, 0));
+		BLOCKS_X*CHUNKS_X, BLOCKS_Z*CHUNKS_Z, 1234, 0.75f, 4, 0.5f, 2.0f, glm::vec2(0, 0));
+
+	float max_noise = 0;
+	for (auto x : noise_map)
+	{
+		for (auto y : x)
+		{
+			if (y > max_noise)
+			{
+				max_noise = y;
+			}
+		}
+	}
 
 	for (int x = 0; x < CHUNKS_X*BLOCKS_X; ++x)
 	{
 		for (int z = 0; z < CHUNKS_Z*BLOCKS_Z; ++z)
 		{
-			// get height in range [1, BLOCKS_Y * CHUNKS_Y]
-			float noise = noise_map.at(x).at(z) * BLOCKS_Y * CHUNKS_Y - 1;
+			float noise = noise_map.at(x).at(z);
+			noise *= max_y - 1;
 			int xz_height = int(noise) + 1;
 
 			int block_type;
 			int below = 0;
 
-			const int max_y = BLOCKS_Y * CHUNKS_Y;
-
 			for (int y = 0; y < xz_height; ++y)
 			{
 				// rock bottom
-				if (y < max_y * 0.1)
+				if (y < bedrock_height)
 				{
-					block_type = 3;
+					block_type = ROCK;
 				}
 				// rock almost bottom with 40% chance
-				else if (y < max_y * 0.13)
+				else if (y < bedrock_height + 0.03)
 				{
 					if (rand() < RAND_MAX * 0.4)
 					{
-						block_type = 3;
+						block_type = ROCK;
 					}
 					else
 					{
-						block_type = 5;
+						block_type = SAND;
 					}
 				}
 				// sand
-				else if (y < max_y * 0.2)
+				else if (y < sand_height)
 				{
-					block_type = 5;
+					block_type = SAND;
 				}
 				// dirt and grass
-				else if (y < max_y * 0.7)
+				else if (y < grass_height)
 				{
-					block_type = 1;
+					block_type = GRASS;
 				}
 				// mountain top rock
-				else if (y < max_y * 0.8)
+				else if (y < mountain_rock_height)
 				{
 					if (rand() < RAND_MAX * 0.1)
 					{
-						block_type = 16;
+						block_type = SNOW;
 					}
 					else
 					{
-						block_type = 3;
+						block_type = ROCK;
 					}
 				}
-				else if (y < max_y * 0.85)
+				else if (y < mountain_rock_height + 0.05)
 				{
 					if (rand() < RAND_MAX * 0.5)
 					{
-						block_type = 16;
+						block_type = SNOW;
 					}
 					else
 					{
-						block_type = 3;
+						block_type = ROCK;
 					}
 				}
 				// mountain top snow
 				else
 				{
-					block_type = 16;
+					block_type = SNOW;
 				}
 
 				world->set(x, y, z, block_type);
 
 				// change below grass to dirt if needed
-				if (y > 0 && below == 1 && (block_type == 1 || block_type == 3))
+				if (y > 0 && below == GRASS && (block_type == GRASS || block_type == ROCK))
 				{
-					world->set(x, y - 1, z, 2);
+					world->set(x, y - 1, z, DIRT);
 				}
 				//*/
 				below = block_type;
@@ -112,7 +132,30 @@ void Display::make_world()
 			// water
 			for (int y = xz_height; y < water_height; ++y)
 			{
-				world->set(x, y, z, 4);
+				world->set(x, y, z, WATER);
+			}
+
+			if (xz_height > water_height && xz_height < grass_height && rand() < RAND_MAX * 0.005)
+			{
+				auto tree = world_helper.get_tree_indices();
+
+				for (int tree_x = 0; tree_x < tree.size(); tree_x++)
+				{
+					for (int tree_y = 0; tree_y < tree[0].size(); tree_y++)
+					{
+						for (int tree_z = 0; tree_z < tree[0][0].size(); tree_z++)
+						{
+							if (world->get(x + tree_x, xz_height + tree_y, z + tree_z) == 0)
+							{
+								int tree_block = tree[tree_x][tree_y][tree_z];
+								if (tree_block)
+								{
+									world->set(x + tree_x - 2, xz_height + tree_y, z + tree_z - 2, tree_block);
+								}
+							}
+						}
+					}
+				}
 			}
 		}
 	}
@@ -165,7 +208,14 @@ bool Display::setup(int argc, char* argv[])
 
 	previous_time_fps = glfwGetTime();
 
-	position = glm::vec3(BLOCKS_X*CHUNKS_X / 2.0, BLOCKS_Y*CHUNKS_Y, BLOCKS_Z*CHUNKS_Z / 2.0);
+	// set up initial view
+	position = glm::vec3(BLOCKS_X*CHUNKS_X, BLOCKS_Y*CHUNKS_Y * 2.0, BLOCKS_Z*CHUNKS_Z);
+	angles.x = M_PI * -0.75;
+	angles.y = M_PI * -0.25;
+	look_at.x = sinf(angles.x) * cosf(angles.y);
+	look_at.y = sinf(angles.y);
+	look_at.z = cosf(angles.x) * cosf(angles.y);
+	set_model_translation(0, 0, 0);
 
 	std::cout << "Setup successful." << std::endl;
 	return true;

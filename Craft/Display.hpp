@@ -26,7 +26,7 @@ private:
 	double cursor_x;
 	double cursor_y;
 
-	float speed = 10.0;
+	float speed = 50.0;
 	double previous_time_move = 0;
 
 	int move = 0;

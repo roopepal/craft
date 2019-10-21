@@ -13,10 +13,15 @@ std::vector<std::vector<float>> Noise::perlin(
 
 	std::vector<glm::vec2> octave_offsets;
 
+	if (scale <= 0)
+	{
+		scale = 0.001f;
+	}
+
 	for (int i = 0; i < octaves; i++)
 	{
-		int rand_x = rand() % 200000 - 100000 + offset.x;
-		int rand_y = rand() % 200000 - 100000 + offset.y;
+		int rand_x = rand() % 2000 - 1000 + offset.x;
+		int rand_y = rand() % 2000 - 1000 + offset.y;
 		rand_x /= map_width;
 		rand_y /= map_height;
 		octave_offsets.push_back(glm::vec2(rand_x, rand_y));
@@ -39,8 +44,8 @@ std::vector<std::vector<float>> Noise::perlin(
 
 			for (int i = 0; i < octaves; ++i)
 			{
-				float sample_x = (x - half_width) / scale * frequency + octave_offsets.at(i).x;
-				float sample_y = (y - half_height) / scale * frequency + octave_offsets.at(i).y;
+				float sample_x = (x + half_width) / scale * frequency + octave_offsets.at(i).x;
+				float sample_y = (y + half_height) / scale * frequency + octave_offsets.at(i).y;
 				sample_x /= map_width;
 				sample_y /= map_height;
 

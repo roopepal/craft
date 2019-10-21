@@ -37,8 +37,8 @@ struct SuperChunk
 
 	byte4 vertices_opaque[BLOCKS_X * CHUNKS_X * BLOCKS_Y * CHUNKS_Y * BLOCKS_Z * CHUNKS_Z * 6 * 6];
 	byte4 vertices_transparent[BLOCKS_X * BLOCKS_Y * BLOCKS_Z * 6 * 6];
-	long int n_opaque;
-	long int n_transparent;
+	unsigned int n_opaque;
+	unsigned int n_transparent;
 	GLuint vbo_opaque;
 	GLuint vbo_transparent;
 
